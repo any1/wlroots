@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="wlr_damage_stream_unstable_v1">
+  <copyright>
+    Copyright (c) 2019 Andri Yngvason
+
+    Et cetera...
+  </copyright>
+
+  <description summary="a protocol for damage notification">
+    An interface to monitor damage regions on an output.
+
+    Warning, unstable, etc.
+  </description>
+
+  <!--
+  <interface name="zwlr_damage_stream_manager_v1" version="1">
+    <description summary="manager to register damage subscriptions">
+      This object is a manager with which to subscribe to damage notifications.
+    </description>
+
+    <request name="subscribe">
+      <description summary="subscribe to damage notifications">
+        Be notified about all damage on the output
+      </description>
+      <arg name="stream" type="new_id" interface="zwlr_damage_stream_v1"/>
+      <arg name="output" type="object" interface="wl_output"/>
+    </request>
+
+    <request name="destroy" type="destructor">
+      <description summary="delete this object">
+        Unreference the manager
+      </description>
+    </request>
+  </interface>
+-->
+
+  <interface name="zwlr_damage_stream_v1" version="1">
+    <description summary="damage stream subscription">
+      Gets the damage events
+    </description>
+
+    <event name="damage">
+      <description summary="a damage notification">
+        Damage has been done. Notify subscribers.
+      </description>
+
+      <arg name="region" type="object" interface="wl_region"/>
+    </event>
+
+    <request name="destroy" type="destructor">
+      <description summary="delete this object">
+        Unreference the subscription
+      </description>
+    </request>
+  </interface>
+</protocol>

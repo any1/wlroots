@@ -38,6 +38,7 @@ protocols = [
 	'wlr-layer-shell-unstable-v1.xml',
 	'wlr-output-management-unstable-v1.xml',
 	'wlr-screencopy-unstable-v1.xml',
+	'wlr-damage-stream-unstable-v1.xml',
 ]
 
 client_protocols = [
@@ -57,6 +58,7 @@ client_protocols = [
 	'wlr-input-inhibitor-unstable-v1.xml',
 	'wlr-layer-shell-unstable-v1.xml',
 	'wlr-screencopy-unstable-v1.xml',
+	'wlr-damage-stream-unstable-v1.xml',
 ]
 
 wl_protos_src = []
