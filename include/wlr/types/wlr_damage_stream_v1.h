@@ -25,12 +25,14 @@ struct wlr_damage_stream_v1 {
         struct wl_list link;
         struct wl_resource* resource;
 
-        struct wlr_damage_stream_manager_v1* manager;
-        struct wlr_output* output;
+        struct wlr_damage_stream_manager_v1 *manager;
+        struct wlr_output *output;
+
+        struct wl_listener damage_listener;
 };
 
 struct wlr_damage_stream_manager_v1 *wlr_damage_stream_manager_v1_create(
-		struct wl_display* display);
+		struct wl_display *display);
 
 void wlr_damage_stream_manager_v1_destroy(
 		struct wlr_damage_stream_manager_v1 *self);

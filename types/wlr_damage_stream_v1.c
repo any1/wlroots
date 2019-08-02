@@ -22,6 +22,7 @@ static void destroy_stream(struct wlr_damage_stream_v1 *self) {
 	if (!self)
 		return;
 
+	wl_list_remove(&self->damage_listener.link);
 	wl_list_remove(&self->link);
 
 	free(self);
@@ -40,6 +41,23 @@ static void stream_handle_resource_destroy(struct wl_resource *resource) {
 	destroy_stream(stream_from_resource(resource));
 }
 
+void damage_listener(struct wl_listener *listener, void* data) {
+	struct wlr_damage_stream_v1 *stream =
+		wl_container_of(listener, stream, damage_listener);
+
+	int x1, y1, x2, y2;
+
+	struct pixman_box32* ext =
+		pixman_region32_extents(&stream->output->damage);
+
+	x1 = ext->x1;
+	y1 = ext->y1;
+	x2 = ext->x2;
+	y2 = ext->y2;
+
+	zwlr_damage_stream_v1_send_damage(stream->resource, x1, y1, x2, y2);
+}
+
 static void subscribe(struct wl_client *client,
 		struct wlr_damage_stream_manager_v1 *manager, uint32_t version,
 		uint32_t stream_id, struct wlr_output* output) {
@@ -54,7 +72,7 @@ static void subscribe(struct wl_client *client,
 	stream->output = output;
 
 	stream->resource = wl_resource_create(client,
-			&zwlr_damage_stream_manager_v1_interface, version,
+			&zwlr_damage_stream_v1_interface, version,
 			stream_id);
 	if (!stream->resource) {
 		free(stream);
@@ -64,6 +82,9 @@ static void subscribe(struct wl_client *client,
 
 	wl_resource_set_implementation(stream->resource, &damage_stream_impl,
 			stream, stream_handle_resource_destroy);
+
+	stream->damage_listener.notify = damage_listener;
+	wl_signal_add(&output->events.needs_frame, &stream->damage_listener);
 
 	wl_list_insert(&manager->subscriptions, &stream->link);
 

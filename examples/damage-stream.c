@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	if (!ctx.damage_stream) {
+	if (!ctx.damage_stream_manager) {
 		fprintf(stderr, "No damage stream is available\n");
 		return 1;
 	}
