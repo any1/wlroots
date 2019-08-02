@@ -65,6 +65,7 @@ struct roots_desktop {
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 	struct wlr_pointer_gestures_v1 *pointer_gestures;
 	struct wlr_output_manager_v1 *output_manager_v1;
+	struct wlr_damage_stream_manager_v1 *damage_stream_manager;
 
 	struct wl_listener new_output;
 	struct wl_listener layout_change;

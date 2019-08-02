@@ -21,6 +21,7 @@
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_tablet_v2.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_damage_stream_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
@@ -442,6 +443,9 @@ struct roots_desktop *desktop_create(struct roots_server *server,
 	desktop->output_manager_test.notify = handle_output_manager_test;
 	wl_signal_add(&desktop->output_manager_v1->events.test,
 		&desktop->output_manager_test);
+
+	desktop->damage_stream_manager =
+		wlr_damage_stream_manager_v1_create(server->wl_display);
 
 	wlr_primary_selection_v1_device_manager_create(server->wl_display);
 	wlr_data_control_manager_v1_create(server->wl_display);
