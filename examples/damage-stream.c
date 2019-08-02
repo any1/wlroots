@@ -8,6 +8,7 @@
 
 struct damage_client {
 	struct wl_output *output;
+	struct zwlr_damage_stream_manager_v1 *damage_stream_manager;
 	struct zwlr_damage_stream_v1 *damage_stream;
 
 	int do_exit;
@@ -18,14 +19,19 @@ static void handle_global(void *data, struct wl_registry *registry,
 	struct damage_client *ctx = data;
 
 	if (strcmp(interface, wl_output_interface.name) == 0) {
-		if (!ctx->output)
-			ctx->output = wl_registry_bind(registry, name,
-					&wl_output_interface, 1);
-	} else if (strcmp(interface, zwlr_damage_stream_v1_interface.name) == 0) {
+		if (ctx->output)
+			return;
+
+		ctx->output = wl_registry_bind(registry, name,
+				&wl_output_interface, 1);
+
+	}
+
+	if (strcmp(interface, zwlr_damage_stream_manager_v1_interface.name) == 0) {
 		assert(!ctx->damage_stream);
 
-		ctx->damage_stream = wl_registry_bind(registry, name,
-				&zwlr_damage_stream_v1_interface, 1);
+		ctx->damage_stream_manager = wl_registry_bind(registry, name,
+				&zwlr_damage_stream_manager_v1_interface, 1);
 	}
 }
 
@@ -75,10 +81,14 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+	ctx.damage_stream = zwlr_damage_stream_manager_v1_subscribe(
+			ctx.damage_stream_manager, ctx.output);
+
 	zwlr_damage_stream_v1_add_listener(ctx.damage_stream, &damage_listener,
 			&ctx);
 
 	while (wl_display_dispatch(display) >= 0 && !ctx.do_exit);
 
+	wl_display_disconnect(display);
 	return 0;
 }

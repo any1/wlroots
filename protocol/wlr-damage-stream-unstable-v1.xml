@@ -12,7 +12,6 @@
     Warning, unstable, etc.
   </description>
 
-  <!--
   <interface name="zwlr_damage_stream_manager_v1" version="1">
     <description summary="manager to register damage subscriptions">
       This object is a manager with which to subscribe to damage notifications.
@@ -32,7 +31,6 @@
       </description>
     </request>
   </interface>
--->
 
   <interface name="zwlr_damage_stream_v1" version="1">
     <description summary="damage stream subscription">
