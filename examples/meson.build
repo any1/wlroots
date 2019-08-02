@@ -117,6 +117,10 @@ examples = {
 		'src': 'fullscreen-shell.c',
 		'dep': [wlr_protos, wlroots],
 	},
+	'damage-stream': {
+		'src': 'damage-stream.c',
+		'dep': [wayland_client, wlr_protos, wlroots],
+	},
 }
 
 foreach name, info : examples
