@@ -44,7 +44,10 @@
         Damage has been done. Notify subscribers.
       </description>
 
-      <arg name="region" type="object" interface="wl_region"/>
+      <arg name="x1" type="uint"/>
+      <arg name="y1" type="uint"/>
+      <arg name="x2" type="uint"/>
+      <arg name="y2" type="uint"/>
     </event>
 
     <request name="destroy" type="destructor">
