@@ -48,7 +48,7 @@ void damage_listener(struct wl_listener *listener, void* data) {
 	int x1, y1, x2, y2;
 
 	struct pixman_box32* ext =
-		pixman_region32_extents(&stream->output->damage);
+		pixman_region32_extents(&stream->output->pending.damage);
 
 	x1 = ext->x1;
 	y1 = ext->y1;
@@ -84,7 +84,7 @@ static void subscribe(struct wl_client *client,
 			stream, stream_handle_resource_destroy);
 
 	stream->damage_listener.notify = damage_listener;
-	wl_signal_add(&output->events.needs_frame, &stream->damage_listener);
+	wl_signal_add(&output->events.precommit, &stream->damage_listener);
 
 	wl_list_insert(&manager->subscriptions, &stream->link);
 
