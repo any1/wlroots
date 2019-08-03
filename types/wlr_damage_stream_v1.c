@@ -44,11 +44,14 @@ static void stream_handle_resource_destroy(struct wl_resource *resource) {
 void damage_listener(struct wl_listener *listener, void* data) {
 	struct wlr_damage_stream_v1 *stream =
 		wl_container_of(listener, stream, damage_listener);
-
+	struct wlr_output* output = stream->output;
 	int x1, y1, x2, y2;
 
+	if (!(output->pending.committed & WLR_OUTPUT_STATE_DAMAGE))
+		return;
+
 	struct pixman_box32* ext =
-		pixman_region32_extents(&stream->output->pending.damage);
+		pixman_region32_extents(&output->pending.damage);
 
 	x1 = ext->x1;
 	y1 = ext->y1;
