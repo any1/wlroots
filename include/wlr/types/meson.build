@@ -3,6 +3,7 @@ install_headers(
 	'wlr_buffer.h',
 	'wlr_compositor.h',
 	'wlr_cursor.h',
+	'wlr_damage_stream_v1.h',
 	'wlr_data_control_v1.h',
 	'wlr_data_device.h',
 	'wlr_export_dmabuf_v1.h',
