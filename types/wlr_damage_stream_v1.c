@@ -46,17 +46,26 @@ void damage_listener(struct wl_listener *listener, void* data) {
 		wl_container_of(listener, stream, damage_listener);
 	struct wlr_output* output = stream->output;
 	int x1, y1, x2, y2;
+	struct pixman_box32* ext;
 
 	if (!(output->pending.committed & WLR_OUTPUT_STATE_DAMAGE))
 		return;
 
-	struct pixman_box32* ext =
-		pixman_region32_extents(&output->pending.damage);
+	struct pixman_region32 *damage = &output->pending.damage;
 
-	x1 = ext->x1;
-	y1 = ext->y1;
-	x2 = ext->x2;
-	y2 = ext->y2;
+	if (!pixman_region32_not_empty(damage)) {
+		x1 = 0;
+		y1 = 0;
+		x2 = output->width;
+		y2 = output->height;
+	} else {
+		ext = pixman_region32_extents(&output->pending.damage);
+
+		x1 = ext->x1;
+		y1 = ext->y1;
+		x2 = ext->x2;
+		y2 = ext->y2;
+	}
 
 	zwlr_damage_stream_v1_send_damage(stream->resource, x1, y1, x2, y2);
 }
