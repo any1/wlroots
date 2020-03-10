@@ -3,7 +3,6 @@
 #include <wlr/interfaces/wlr_input_device.h>
 #include <wlr/interfaces/wlr_output.h>
 #include <wlr/render/egl.h>
-#include <wlr/render/gles2.h>
 #include <wlr/util/log.h>
 #include "backend/headless.h"
 #include "util/signal.h"
@@ -100,8 +99,7 @@ struct wlr_backend *wlr_headless_backend_create(struct wl_display *display,
 	wl_list_init(&backend->input_devices);
 
 	static const EGLint config_attribs[] = {
-		EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-		EGL_ALPHA_SIZE, 0,
+		EGL_SURFACE_TYPE, 0,
 		EGL_BLUE_SIZE, 1,
 		EGL_GREEN_SIZE, 1,
 		EGL_RED_SIZE, 1,

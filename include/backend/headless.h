@@ -3,6 +3,7 @@
 
 #include <wlr/backend/headless.h>
 #include <wlr/backend/interface.h>
+#include <wlr/render/gles2.h>
 
 #define HEADLESS_DEFAULT_REFRESH (60 * 1000) // 60 Hz
 
@@ -24,7 +25,8 @@ struct wlr_headless_output {
 	struct wlr_headless_backend *backend;
 	struct wl_list link;
 
-	void *egl_surface;
+	GLuint fbo, rbo;
+
 	struct wl_event_source *frame_timer;
 	int frame_delay; // ms
 };
