@@ -22,6 +22,15 @@
 #include <wlr/backend/x11.h>
 #endif
 
+enum {
+	WLR_BACKEND_WAYLAND = 1UL << 0,
+	WLR_BACKEND_X11 = 1UL << 1,
+	WLR_BACKEND_HEADLESS = 1UL << 2,
+	WLR_BACKEND_NOOP = 1UL << 3,
+	WLR_BACKEND_LIBINPUT = 1UL << 4,
+	WLR_BACKEND_DRM = 1UL << 5,
+};
+
 void wlr_backend_init(struct wlr_backend *backend,
 		const struct wlr_backend_impl *impl) {
 	assert(backend);
@@ -87,11 +96,12 @@ static size_t parse_outputs_env(const char *name) {
 	return outputs;
 }
 
-static struct wlr_backend *attempt_wl_backend(struct wl_display *display,
+static int attempt_wl_backend(struct wlr_backend *parent,
+		struct wl_display *display,
 		wlr_renderer_create_func_t create_renderer_func) {
 	struct wlr_backend *backend = wlr_wl_backend_create(display, NULL, create_renderer_func);
 	if (backend == NULL) {
-		return NULL;
+		return -1;
 	}
 
 	size_t outputs = parse_outputs_env("WLR_WL_OUTPUTS");
@@ -99,15 +109,21 @@ static struct wlr_backend *attempt_wl_backend(struct wl_display *display,
 		wlr_wl_output_create(backend);
 	}
 
-	return backend;
+	if (!wlr_multi_backend_add(parent, backend)) {
+		wlr_backend_destroy(backend);
+		return -1;
+	}
+
+	return 0;
 }
 
 #if WLR_HAS_X11_BACKEND
-static struct wlr_backend *attempt_x11_backend(struct wl_display *display,
-		const char *x11_display, wlr_renderer_create_func_t create_renderer_func) {
+static int attempt_x11_backend(struct wlr_backend *parent,
+		struct wl_display *display, const char *x11_display,
+		wlr_renderer_create_func_t create_renderer_func) {
 	struct wlr_backend *backend = wlr_x11_backend_create(display, x11_display, create_renderer_func);
 	if (backend == NULL) {
-		return NULL;
+		return -1;
 	}
 
 	size_t outputs = parse_outputs_env("WLR_X11_OUTPUTS");
@@ -115,15 +131,20 @@ static struct wlr_backend *attempt_x11_backend(struct wl_display *display,
 		wlr_x11_output_create(backend);
 	}
 
-	return backend;
+	if (!wlr_multi_backend_add(parent, backend)) {
+		wlr_backend_destroy(backend);
+		return -1;
+	}
+
+	return 0;
 }
 #endif
 
-static struct wlr_backend *attempt_headless_backend(
+static int attempt_headless_backend(struct wlr_backend *parent,
 		struct wl_display *display, wlr_renderer_create_func_t create_renderer_func) {
 	struct wlr_backend *backend = wlr_headless_backend_create(display, create_renderer_func);
 	if (backend == NULL) {
-		return NULL;
+		return -1;
 	}
 
 	size_t outputs = parse_outputs_env("WLR_HEADLESS_OUTPUTS");
@@ -131,13 +152,19 @@ static struct wlr_backend *attempt_headless_backend(
 		wlr_headless_add_output(backend, 1280, 720);
 	}
 
-	return backend;
+	if (!wlr_multi_backend_add(parent, backend)) {
+		wlr_backend_destroy(backend);
+		return -1;
+	}
+
+	return 0;
 }
 
-static struct wlr_backend *attempt_noop_backend(struct wl_display *display) {
+static int attempt_noop_backend(struct wlr_backend *parent,
+		struct wl_display *display) {
 	struct wlr_backend *backend = wlr_noop_backend_create(display);
 	if (backend == NULL) {
-		return NULL;
+		return -1;
 	}
 
 	size_t outputs = parse_outputs_env("WLR_NOOP_OUTPUTS");
@@ -145,10 +172,31 @@ static struct wlr_backend *attempt_noop_backend(struct wl_display *display) {
 		wlr_noop_add_output(backend);
 	}
 
-	return backend;
+	if (!wlr_multi_backend_add(parent, backend)) {
+		wlr_backend_destroy(backend);
+		return -1;
+	}
+
+	return 0;
 }
 
-static struct wlr_backend *attempt_drm_backend(struct wl_display *display,
+static int attempt_libinput_backend(struct wlr_backend *parent,
+		struct wlr_session* session, struct wl_display *display) {
+	struct wlr_backend *backend = wlr_libinput_backend_create(display,
+		session);
+	if (backend == NULL) {
+		return -1;
+	}
+
+	if (!wlr_multi_backend_add(parent, backend)) {
+		wlr_backend_destroy(backend);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int attempt_drm_backend(struct wl_display *display,
 		struct wlr_backend *backend, struct wlr_session *session,
 		wlr_renderer_create_func_t create_renderer_func) {
 	int gpus[8];
@@ -171,41 +219,48 @@ static struct wlr_backend *attempt_drm_backend(struct wl_display *display,
 		wlr_multi_backend_add(backend, drm);
 	}
 
-	return primary_drm;
-}
-
-static struct wlr_backend *attempt_backend_by_name(struct wl_display *display,
-		struct wlr_backend *backend, struct wlr_session **session,
-		const char *name, wlr_renderer_create_func_t create_renderer_func) {
-	if (strcmp(name, "wayland") == 0) {
-		return attempt_wl_backend(display, create_renderer_func);
-#if WLR_HAS_X11_BACKEND
-	} else if (strcmp(name, "x11") == 0) {
-		return attempt_x11_backend(display, NULL, create_renderer_func);
-#endif
-	} else if (strcmp(name, "headless") == 0) {
-		return attempt_headless_backend(display, create_renderer_func);
-	} else if (strcmp(name, "noop") == 0) {
-		return attempt_noop_backend(display);
-	} else if (strcmp(name, "drm") == 0 || strcmp(name, "libinput") == 0) {
-		// DRM and libinput need a session
-		if (!*session) {
-			*session = wlr_session_create(display);
-			if (!*session) {
-				wlr_log(WLR_ERROR, "failed to start a session");
-				return NULL;
-			}
-		}
-
-		if (strcmp(name, "libinput") == 0) {
-			return wlr_libinput_backend_create(display, *session);
-		} else {
-			return attempt_drm_backend(display, backend, *session, create_renderer_func);
-		}
+	if (!primary_drm) {
+		return -1;
 	}
 
-	wlr_log(WLR_ERROR, "unrecognized backend '%s'", name);
-	return NULL;
+	if (!wlr_multi_backend_add(backend, primary_drm)) {
+		wlr_backend_destroy(backend);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int32_t parse_backends(const char *str) {
+	char names[256];
+	strncpy(names, str, sizeof(names));
+	names[sizeof(names) - 1] = '\0';
+
+	uint32_t types = 0;
+
+	char *saveptr, *name = strtok_r(names, ",", &saveptr);
+	while (name) {
+		if (strcmp(name, "wayland") == 0) {
+			types |= WLR_BACKEND_WAYLAND;
+		} else if (strcmp(name, "x11") == 0) {
+			types |= WLR_BACKEND_X11;
+		} else if (strcmp(name, "headless") == 0) {
+			types |= WLR_BACKEND_HEADLESS;
+		} else if (strcmp(name, "noop") == 0) {
+			types |= WLR_BACKEND_NOOP;
+		} else if (strcmp(name, "libinput") == 0) {
+			types |= WLR_BACKEND_LIBINPUT;
+		} else if (strcmp(name, "drm") == 0) {
+			types |= WLR_BACKEND_DRM;
+		} else {
+			wlr_log(WLR_ERROR, "unrecognized backend '%s'", name);
+			return -1;
+		}
+
+		name = strtok_r(NULL, ",", &saveptr);
+	}
+
+	return types;
 }
 
 struct wlr_backend *wlr_backend_autocreate(struct wl_display *display,
@@ -219,63 +274,88 @@ struct wlr_backend *wlr_backend_autocreate(struct wl_display *display,
 
 	char *names = getenv("WLR_BACKENDS");
 	if (names) {
-		names = strdup(names);
-		if (names == NULL) {
-			wlr_log(WLR_ERROR, "allocation failed");
-			wlr_backend_destroy(backend);
-			return NULL;
+		int32_t types = parse_backends(names);
+		if (types < 0) {
+			goto error;
 		}
 
-		char *saveptr;
-		char *name = strtok_r(names, ",", &saveptr);
-		while (name != NULL) {
-			struct wlr_backend *subbackend = attempt_backend_by_name(display,
-				backend, &multi->session, name, create_renderer_func);
-			if (subbackend == NULL) {
-				wlr_log(WLR_ERROR, "failed to start backend '%s'", name);
-				wlr_session_destroy(multi->session);
-				wlr_backend_destroy(backend);
-				free(names);
-				return NULL;
+		if ((types & (WLR_BACKEND_DRM | WLR_BACKEND_LIBINPUT)) ==
+				(WLR_BACKEND_DRM | WLR_BACKEND_LIBINPUT)) {
+			multi->session = wlr_session_create(display);
+			if (!multi->session) {
+				wlr_log(WLR_ERROR, "Failed to start a DRM session");
+				goto error;
 			}
-
-			if (!wlr_multi_backend_add(backend, subbackend)) {
-				wlr_log(WLR_ERROR, "failed to add backend '%s'", name);
-				wlr_session_destroy(multi->session);
-				wlr_backend_destroy(backend);
-				free(names);
-				return NULL;
-			}
-
-			name = strtok_r(NULL, ",", &saveptr);
 		}
 
-		free(names);
+		if (types & WLR_BACKEND_X11) {
+			if (attempt_x11_backend(backend, display, NULL,
+					create_renderer_func) < 0) {
+				wlr_log(WLR_ERROR, "Failed to start load x11 backend");
+				goto error;
+			}
+		}
+
+		if (types & WLR_BACKEND_WAYLAND) {
+			if (attempt_wl_backend(backend, display,
+					create_renderer_func) < 0) {
+				wlr_log(WLR_ERROR, "Failed to start load wayland backend");
+				goto error;
+			}
+		}
+
+		if (types & WLR_BACKEND_NOOP) {
+			if (attempt_noop_backend(backend, display) < 0) {
+				wlr_log(WLR_ERROR, "Failed to start load noop backend");
+				goto error;
+			}
+		}
+
+		if (types & WLR_BACKEND_LIBINPUT) {
+			if (attempt_libinput_backend(backend, multi->session,
+					display) < 0) {
+				wlr_log(WLR_ERROR, "Failed to start load libinput backend");
+				goto error;
+			}
+		}
+
+		if (types & WLR_BACKEND_DRM) {
+			if (attempt_drm_backend(display, backend,
+					multi->session, create_renderer_func) < 0) {
+				wlr_log(WLR_ERROR, "Failed to start load drm backend");
+				goto error;
+			}
+		}
+
+		if (types & WLR_BACKEND_HEADLESS) {
+			if (attempt_headless_backend(backend, display,
+					create_renderer_func) < 0) {
+				wlr_log(WLR_ERROR, "Failed to start load headless backend");
+				goto error;
+			}
+		}
+
 		return backend;
 	}
 
 	if (getenv("WAYLAND_DISPLAY") || getenv("_WAYLAND_DISPLAY") ||
 			getenv("WAYLAND_SOCKET")) {
-		struct wlr_backend *wl_backend = attempt_wl_backend(display,
-			create_renderer_func);
-		if (!wl_backend) {
+		int rc = attempt_wl_backend(backend, display, create_renderer_func);
+		if (rc < 0) {
 			goto error;
 		}
 
-		wlr_multi_backend_add(backend, wl_backend);
 		return backend;
 	}
 
 #if WLR_HAS_X11_BACKEND
 	const char *x11_display = getenv("DISPLAY");
 	if (x11_display) {
-		struct wlr_backend *x11_backend =
-			attempt_x11_backend(display, x11_display, create_renderer_func);
-		if (!x11_backend) {
+		int rc = attempt_x11_backend(backend, display, x11_display, create_renderer_func);
+		if (rc < 0) {
 			goto error;
 		}
 
-		wlr_multi_backend_add(backend, x11_backend);
 		return backend;
 	}
 #endif
@@ -284,33 +364,26 @@ struct wlr_backend *wlr_backend_autocreate(struct wl_display *display,
 	multi->session = wlr_session_create(display);
 	if (!multi->session) {
 		wlr_log(WLR_ERROR, "Failed to start a DRM session");
-		wlr_backend_destroy(backend);
-		return NULL;
+		goto error;
 	}
 
-	struct wlr_backend *libinput = wlr_libinput_backend_create(display,
-		multi->session);
-	if (!libinput) {
+	int rc = attempt_libinput_backend(backend, multi->session, display);
+	if (rc < 0) {
 		wlr_log(WLR_ERROR, "Failed to start libinput backend");
-		wlr_session_destroy(multi->session);
-		wlr_backend_destroy(backend);
-		return NULL;
+		goto error;
 	}
-	wlr_multi_backend_add(backend, libinput);
 
-	struct wlr_backend *primary_drm = attempt_drm_backend(display, backend,
+	rc = attempt_drm_backend(display, backend,
 		multi->session, create_renderer_func);
-	if (!primary_drm) {
+	if (rc < 0) {
 		wlr_log(WLR_ERROR, "Failed to open any DRM device");
-		wlr_backend_destroy(libinput);
-		wlr_session_destroy(multi->session);
-		wlr_backend_destroy(backend);
-		return NULL;
+		goto error;
 	}
 
 	return backend;
 
 error:
+	wlr_session_destroy(multi->session);
 	wlr_backend_destroy(backend);
 	return NULL;
 }
