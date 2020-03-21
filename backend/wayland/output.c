@@ -6,6 +6,8 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 
 #include <wayland-client.h>
 
@@ -105,8 +107,14 @@ static bool output_attach_render(struct wlr_output *wlr_output,
 		int *buffer_age) {
 	struct wlr_wl_output *output =
 		get_wl_output_from_output(wlr_output);
-	return wlr_egl_make_current(&output->backend->egl, output->egl_surface,
-		buffer_age);
+	if (!wlr_egl_make_current(&output->backend->egl, output->egl_surface,
+			buffer_age)) {
+		return false;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	return true;
 }
 
 static void destroy_wl_buffer(struct wlr_wl_buffer *buffer) {
@@ -336,6 +344,7 @@ static bool output_set_cursor(struct wlr_output *wlr_output,
 			wlr_egl_create_surface(&backend->egl, output->cursor.egl_window);
 
 		wlr_egl_make_current(&backend->egl, egl_surface, NULL);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		struct wlr_box cursor_box = {
 			.width = width,
@@ -550,6 +559,7 @@ struct wlr_output *wlr_wl_output_create(struct wlr_backend *wlr_backend) {
 			NULL)) {
 		goto error;
 	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	wlr_renderer_begin(backend->renderer, wlr_output->width, wlr_output->height);
 	wlr_renderer_clear(backend->renderer, (float[]){ 1.0, 1.0, 1.0, 1.0 });
