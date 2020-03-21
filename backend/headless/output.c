@@ -23,7 +23,7 @@ static bool create_fbo(struct wlr_headless_output *output,
 	GLuint rbo;
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8_OES, width, height);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8_OES, width, height);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	GLuint fbo;
