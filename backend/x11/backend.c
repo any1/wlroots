@@ -152,10 +152,16 @@ static struct wlr_renderer *backend_get_renderer(
 	return x11->renderer;
 }
 
+static struct wlr_egl *backend_get_egl(struct wlr_backend *backend) {
+	struct wlr_x11_backend *x11 = get_x11_backend_from_backend(backend);
+	return &x11->egl;
+}
+
 static const struct wlr_backend_impl backend_impl = {
 	.start = backend_start,
 	.destroy = backend_destroy,
 	.get_renderer = backend_get_renderer,
+	.get_egl = backend_get_egl,
 };
 
 bool wlr_backend_is_x11(struct wlr_backend *backend) {

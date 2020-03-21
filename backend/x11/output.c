@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 
 #include <xcb/xcb.h>
 #include <xcb/xinput.h>
@@ -96,7 +98,13 @@ static bool output_attach_render(struct wlr_output *wlr_output,
 	struct wlr_x11_output *output = get_x11_output_from_output(wlr_output);
 	struct wlr_x11_backend *x11 = output->x11;
 
-	return wlr_egl_make_current(&x11->egl, output->surf, buffer_age);
+	if (!wlr_egl_make_current(&x11->egl, output->surf, buffer_age)) {
+		return false;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	return true;
 }
 
 static bool output_commit(struct wlr_output *wlr_output) {
