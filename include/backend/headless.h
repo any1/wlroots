@@ -11,6 +11,7 @@ struct wlr_headless_backend {
 	struct wlr_backend backend;
 	struct wlr_egl egl;
 	struct wlr_renderer *renderer;
+	bool renderer_is_borrowed;
 	struct wl_display *display;
 	struct wl_list outputs;
 	size_t last_output_num;

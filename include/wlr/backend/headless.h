@@ -18,6 +18,7 @@
  * default.
  */
 struct wlr_backend *wlr_headless_backend_create(struct wl_display *display,
+	struct wlr_renderer *parent_renderer, struct wlr_egl *parent_egl,
 	wlr_renderer_create_func_t create_renderer_func);
 /**
  * Create a new headless output backed by an in-memory EGL framebuffer. You can

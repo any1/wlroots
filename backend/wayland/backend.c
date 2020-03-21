@@ -234,10 +234,16 @@ static struct wlr_renderer *backend_get_renderer(struct wlr_backend *backend) {
 	return wl->renderer;
 }
 
+static struct wlr_egl *backend_get_egl(struct wlr_backend *backend) {
+	struct wlr_wl_backend *wl = get_wl_backend_from_backend(backend);
+	return &wl->egl;
+}
+
 static struct wlr_backend_impl backend_impl = {
 	.start = backend_start,
 	.destroy = backend_destroy,
 	.get_renderer = backend_get_renderer,
+	.get_egl = backend_get_egl,
 };
 
 bool wlr_backend_is_wl(struct wlr_backend *b) {

@@ -66,6 +66,13 @@ struct wlr_renderer *wlr_backend_get_renderer(struct wlr_backend *backend) {
 	return NULL;
 }
 
+struct wlr_egl *wlr_backend_get_egl(struct wlr_backend *backend) {
+	if (backend->impl->get_egl) {
+		return backend->impl->get_egl(backend);
+	}
+	return NULL;
+}
+
 struct wlr_session *wlr_backend_get_session(struct wlr_backend *backend) {
 	if (backend->impl->get_session) {
 		return backend->impl->get_session(backend);
@@ -142,7 +149,9 @@ static int attempt_x11_backend(struct wlr_backend *parent,
 
 static int attempt_headless_backend(struct wlr_backend *parent,
 		struct wl_display *display, wlr_renderer_create_func_t create_renderer_func) {
-	struct wlr_backend *backend = wlr_headless_backend_create(display, create_renderer_func);
+	struct wlr_backend *backend = wlr_headless_backend_create(display,
+		wlr_backend_get_renderer(parent), wlr_backend_get_egl(parent),
+		create_renderer_func);
 	if (backend == NULL) {
 		return -1;
 	}

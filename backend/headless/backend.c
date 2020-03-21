@@ -59,7 +59,9 @@ static void backend_destroy(struct wlr_backend *wlr_backend) {
 
 	wlr_signal_emit_safe(&wlr_backend->events.destroy, backend);
 
-	wlr_renderer_destroy(backend->renderer);
+	if (!backend->renderer_is_borrowed) {
+		wlr_renderer_destroy(backend->renderer);
+	}
 	wlr_egl_finish(&backend->egl);
 	free(backend);
 }
@@ -84,6 +86,7 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 }
 
 struct wlr_backend *wlr_headless_backend_create(struct wl_display *display,
+		struct wlr_renderer* parent_renderer, struct wlr_egl* parent_egl,
 		wlr_renderer_create_func_t create_renderer_func) {
 	wlr_log(WLR_INFO, "Creating headless backend");
 
@@ -110,13 +113,20 @@ struct wlr_backend *wlr_headless_backend_create(struct wl_display *display,
 		create_renderer_func = wlr_renderer_autocreate;
 	}
 
-	backend->renderer = create_renderer_func(&backend->egl,
-		EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY,
-		(EGLint*)config_attribs, 0);
-	if (!backend->renderer) {
-		wlr_log(WLR_ERROR, "Failed to create renderer");
-		free(backend);
-		return NULL;
+	if (parent_renderer) {
+		wlr_log(WLR_DEBUG, "Have parent renderer %p", parent_renderer);
+		backend->renderer = parent_renderer;
+		backend->renderer_is_borrowed = true;
+		memcpy(&backend->egl, parent_egl, sizeof(struct wlr_egl));
+	} else {
+		backend->renderer = create_renderer_func(&backend->egl,
+			EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY,
+			(EGLint*)config_attribs, 0);
+		if (!backend->renderer) {
+			wlr_log(WLR_ERROR, "Failed to create renderer");
+			free(backend);
+			return NULL;
+		}
 	}
 
 	backend->display_destroy.notify = handle_display_destroy;
