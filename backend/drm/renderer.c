@@ -139,7 +139,13 @@ void finish_drm_surface(struct wlr_drm_surface *surf) {
 
 bool make_drm_surface_current(struct wlr_drm_surface *surf,
 		int *buffer_damage) {
-	return wlr_egl_make_current(&surf->renderer->egl, surf->egl, buffer_damage);
+	if(!wlr_egl_make_current(&surf->renderer->egl, surf->egl, buffer_damage)) {
+		return false;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	return true;
 }
 
 struct gbm_bo *swap_drm_surface_buffers(struct wlr_drm_surface *surf,
