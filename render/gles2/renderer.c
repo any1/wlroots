@@ -331,6 +331,16 @@ static bool gles2_read_pixels(struct wlr_renderer *wlr_renderer,
 	return glGetError() == GL_NO_ERROR;
 }
 
+static GLuint gles2_renderbuffer_from_image(EGLImageKHR image)
+{
+	GLuint rbo = 0;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	gles2_procs.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, image);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	return rbo;
+}
+
 static bool gles2_blit_dmabuf(struct wlr_renderer *wlr_renderer,
 		struct wlr_dmabuf_attributes *dst_attr,
 		struct wlr_dmabuf_attributes *src_attr) {
@@ -387,6 +397,9 @@ static bool gles2_blit_dmabuf(struct wlr_renderer *wlr_renderer,
 	wlr_renderer_clear(wlr_renderer, (float[]){ 0.0, 0.0, 0.0, 0.0 });
 	wlr_render_texture_with_matrix(wlr_renderer, src_tex, mat, 1.0f);
 	wlr_renderer_end(wlr_renderer);
+
+	glFlush();
+	glFinish();
 
 	r = true;
 out:
@@ -495,6 +508,7 @@ static const struct wlr_renderer_impl renderer_impl = {
 	.texture_from_dmabuf = gles2_texture_from_dmabuf,
 	.init_wl_display = gles2_init_wl_display,
 	.blit_dmabuf = gles2_blit_dmabuf,
+	.renderbuffer_from_image = gles2_renderbuffer_from_image,
 };
 
 void push_gles2_marker(const char *file, const char *func) {
